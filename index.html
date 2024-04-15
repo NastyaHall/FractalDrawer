@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    </meta>
+    <title>Julia Set Viewer</title>
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="../apple-touch-icon-144x144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="../apple-touch-icon-114x114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="../apple-touch-icon-72x72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="../apple-touch-icon-57x57-precomposed.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tilt+Neon&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+        integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+
+    <link rel="stylesheet" href="leaflet/leaflet.css" />
+    <style>
+        body,
+        html,
+        #map {
+            width: 100%;
+            height: 100%;
+            margin: 0px;
+        }
+
+        select {
+            font-size: 12px;
+        }
+
+        .row {
+            margin-top: 5px;
+        }
+
+        #ci {
+            width: 80px;
+        }
+
+        #iter {
+            width: 119px;
+        }
+
+        /* #r{width: 30px;}*/
+        .leaflet-control-layers label {
+            display: inline;
+        }
+
+        .open-gallery-btn {
+            border: none;
+            cursor: pointer;
+            background-color: white;
+
+        }
+
+        .gallery:not(.expanded) .photo-card {
+            display: none;
+        }
+
+        .expanded {
+            position: fixed;
+            top: 5%;
+            left: 5%;
+            width: 85vw;
+            height: 85vh;
+            z-index: 9998;
+            transform: scale(1);
+            transition: transform 0.5s;
+            animation: show 0.8s;
+        }
+
+        .gallery.hide {
+            animation: hide 0.6s;
+        }
+
+        @keyframes show {
+            from {
+                opacity: 0;
+                transform: translateY(-100%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0%);
+            }
+        }
+
+        @keyframes hide {
+            to {
+                opacity: 0;
+                transform: translateY(-100%);
+            }
+        }
+
+        .export-img-btn {
+            border: none;
+            cursor: pointer;
+            background-color: white;
+            border: 0.5px solid #848383;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-top: 5px;
+            margin-left: 250px;
+        }
+
+        .photo-card {
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            margin-left: 15px;
+            margin-top: 10px;
+            cursor: pointer;
+            padding-bottom: 7px;
+        }
+
+        .photo-card img {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .gallery {
+            padding: 10px;
+        }
+
+        .photo-cards-row {
+            display: flex;
+        }
+
+        .fractal-properties {
+            margin: 2px;
+            text-align: center;
+        }
+
+        .photo-expanded {
+            position: fixed;
+            top: 15%;
+            left: 16.5%;
+            z-index: 10000;
+            animation: show 0.8s;
+        }
+
+        .photo-expanded.show {
+            animation: show 0.8s;
+        }
+
+        .photo-expanded.hide {
+            animation: hide 0.6s;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+        }
+
+        .gallery-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 13px;
+            left: 18px;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .download-button {
+            position: absolute;
+            top: 48px;
+            left: 16px;
+            color: white;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .gallery.animation {
+            animation: shake 0.82s cubic-bezier(.36, .07, .19, .97) both;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-1px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(2px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-4px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(4px, 0, 0);
+            }
+        }
+
+        .gallery-is-empty-msg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            display: none;
+        }
+
+        .barnsley-canvas {
+            position: absolute;
+            z-index: 6;
+        }
+
+        .barnsley-input {
+            max-width: 45px;
+        }
+
+        .barnsley-label {
+            margin-right: 10px;
+        }
+
+        .quantizedPalette {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+        .colorElement{
+            padding: 10px;
+            font: 16px/1.5 "Tilt Neon", sans-serif;
+            color: #fff;
+            font-weight: 500px;
+            margin-bottom: 10px;
+        }
+        #imgfile{
+            font-size: 11px;
+            width: 172px;
+        }
+        .showPaletteBtn{
+            font-size: 11px;
+            border-radius: 3px;
+            border: 0.5px solid #818181;
+            cursor: pointer;
+            background-color: white;
+        }
+        .quantizedPaletteContainer{
+            padding: 20px;
+            z-index: 11111111;
+            position: fixed;
+            top: 15%;
+            left: 60.5%;
+            display: none;
+            width: 30vw;
+            height: 30vh;
+            background-color: white;
+            border-radius: 5px;
+            justify-content: center;
+            align-items: centers;
+        }
+        .quantizedPaletteContainer.show {
+            animation: show 0.8s;
+        }
+
+        .quantizedPaletteContainer.hide {
+            animation: hide 0.6s;
+        }
+        #quantizedPaletteText{
+            transform: translate(24%, 380%);
+            font: 15px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="map"></div>
+    <div class="quantizedPaletteContainer show">
+        <div class="quantizedPalette" id="palette"></div>
+        <p id="quantizedPaletteText"></p>
+    </div>
+    
+
+    <script src="leaflet/leaflet.js"></script>
+    <script src="FractalLayer.js"></script>
+    <script src="mustache.js"></script>
+    <script src="dist/catiline.js"></script>
+    <script src="quantization.js"></script>
+
+    <script type="text/javascript">
+
+        var affines = []; //An array of matrices. Goes with the probs array
+        var points; //The actual points that are plotted
+        var fractal; //Fractal values
+        var c, ctx; //The canvas and context objects
+        var probs; //Array of cumulative probabilities, for each of the matrices in affines.
+        var f = {};
+
+        var barnsley = [[0, 0, 0, 0.16, 0, 0, 0.01],
+        [0.85, 0.04, -0.04, 0.85, 0, 1.6, 0.85],
+        [0.2, -0.26, 0.23, 0.22, 0, 1.6, 0.07],
+        [-0.15, 0.28, 0.26, 0.24, 0, 0.44, 0.07]];
+        var cyclosorus = [[0, 0, 0, 0.25, 0, -0.4, 0.02],
+        [0.95, 0.005, -0.005, 0.93, -0.002, 0.5, 0.84],
+        [0.035, -0.2, 0.16, 0.04, -0.09, 0.02, 0.07],
+        [-0.04, 0.2, 0.16, 0.04, 0.083, 0.12, 0.07]];
+        var modified = [[0, 0, 0, 0.2, 0, -0.12, 0.01],
+        [0.845, 0.035, -0.035, 0.82, 0, 1.6, 0.85],
+        [0.2, -0.31, 0.255, 0.245, 0, 0.29, 0.07],
+        [-0.15, 0.24, 0.25, 0.20, 0, 0.68, .07]];
+        var culcita = [[0, 0, 0, 0.25, 0, -0.14, 0.02],
+        [0.85, 0.02, -0.02, 0.83, 0, 1, 0.84],
+        [0.09, -0.28, 0.3, 0.11, 0, 0.6, 0.07],
+        [-0.09, 0.28, 0.3, 0.09, 0, 0.7, 0.07]];
+        var fishbone = [[0, 0, 0, 0.25, 0, -0.4, 0.02],
+        [0.95, 0.002, -0.002, 0.93, -0.002, 0.5, 0.84],
+        [0.035, -0.11, 0.27, 0.01, -0.05, 0.005, 0.07],
+        [-0.04, 0.11, 0.27, 0.01, 0.047, 0.06, 0.07]];
+        var tree = [[0, 0, 0, 0.5, 0, 0, 0.05],
+        [0.42, -0.42, 0.42, 0.42, 0, 0.2, 0.4],
+        [0.42, 0.42, -0.42, 0.42, 0, 0.2, 0.4],
+        [0.1, 0, 0, 0.1, 0, 0.2, 0.15]];
+        var bee = [[0.6178, 0, 0, -.6178, 0, 1, 0.5],
+        [0, -0.786, 0.786, 0, 0.786, 0, 0.5],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0]];
+
+        var ferns = [barnsley, cyclosorus, modified, culcita, fishbone, tree, bee];
+
+        function fill_boxes(fern_type) { //Loads predefined numbers into the input boxes
+            "use strict";
+            let fern_number = 0;
+            switch (fern_type) {
+                case "barnsleyFern": { fern_number = 0; break; }
+                case "cyclosorus": { fern_number = 1; break; }
+                case "culcita": { fern_number = 3; break; }
+                case "tree": { fern_number = 5; break; }
+            }
+
+            var i, j;
+            var fern = ferns[fern_number];
+            var cells = document.querySelectorAll('.barnsley-input');
+            for (i = 0; i < 4; i++) {
+                for (j = 0; j < 7; j++) {
+                    cells[7 * i + j].defaultValue = fern[i][j];
+                }
+                //$('matrices').reset();
+            }
+        }
+        function getFractalProperties() {
+            var fractalType = document.getElementById('fractalType').value;
+            var iterations = document.getElementById('iter').value;
+
+
+            if (fractalType == 'julia') {
+                var realComponent = document.getElementById('cr').value;
+                var imaginaryComponent = document.getElementById('ci').value;
+                var escapeRadius = document.getElementById('r').value;
+                var colorPalette = quantColors ? 'quantizedPalette' : document.getElementById('colorPalette').value;
+
+                var constant = realComponent < 0 ? `- ${realComponent * (-1)}` : `+ ${realComponent}`;
+                constant += imaginaryComponent < 0 ? `-${imaginaryComponent * (-1)}i` : `+${imaginaryComponent}i`;
+
+                var fractalPropertiesString = `${fractalType} fractal: z³ ${constant}<br>
+                                                Escape Radius: ${escapeRadius}<br>
+                                                Iterations: ${iterations}<br>
+                                                Color Palette: ${colorPalette}`;
+
+                return fractalPropertiesString;
+            }
+            else {
+                var cells = document.querySelectorAll('.barnsley-input');
+                let affinesStr = '';
+                for (i = 0; i < 4; i++) {
+                    for (j = 0; j < 6; j++) {
+                        affinesStr += `${parseFloat(cells[7 * i + j].value)}, `;
+                    }
+                    affinesStr += `${parseFloat(cells[7 * i + 6].value)}<br>`;
+                }
+
+                var fernColor = document.getElementById('fernColor').value;
+                var fractalPropertiesString = `Barnsley Fern | 
+                Iters: ${iterations} | Color: ${fernColor}<br>
+                ${affinesStr}`;
+                return fractalPropertiesString;
+            }
+        }
+        function takeFractalSnapshot() {
+            var fractalType = document.getElementById('fractalType').value;
+
+            var leafletControlContainer = document.querySelector('.leaflet-control-container');
+            leafletControlContainer.style.display = 'none';
+
+            html2canvas(fractalType == 'julia' ? document.getElementById('map') : document.querySelector('.barnsley-canvas')).then(function (canvas) {
+                var img = new Image();
+                var gallery = document.querySelector('.gallery');
+                var photoCardsRow = document.querySelector('.photo-cards-row:last-child');
+                var photoCard = document.createElement('div');
+                var fractalPropertiesDiv = document.createElement('div');
+
+                photoCard.addEventListener('click', function () {
+                    var overlay = document.createElement('div');
+                    overlay.classList.add('overlay');
+
+                    var closeButton = document.createElement('span');
+                    closeButton.innerHTML = '&#x2715;';
+                    closeButton.classList.add('close-button');
+
+                    var downloadButton = document.createElement('span');
+                    downloadButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16"> <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/> <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/> </svg>';
+                    downloadButton.classList.add('download-button');
+
+                    var photoExpanded = document.createElement('div');
+                    photoExpanded.classList.add('photo-expanded');
+                    photoExpanded.classList.add('show');
+
+                    var imgCopy = img.cloneNode(true);
+
+                    photoExpanded.style.width = `${window.innerWidth / 1.5}px`;
+                    photoExpanded.style.height = `${window.innerHeight / 1.5}px`;
+                    imgCopy.style.width = `${window.innerWidth / 1.5}px`;
+                    imgCopy.style.height = `${window.innerHeight / 1.5}px`;
+
+                    photoExpanded.appendChild(closeButton);
+                    photoExpanded.appendChild(downloadButton);
+                    photoExpanded.appendChild(imgCopy);
+
+                    document.body.appendChild(overlay);
+                    document.body.appendChild(photoExpanded);
+
+                    overlay.addEventListener('click', function () {
+                        document.body.removeChild(photoExpanded);
+                        document.body.removeChild(overlay);
+                    });
+                    closeButton.addEventListener('click', function (event) {
+                        event.stopPropagation(); // Prevent the overlay from closing
+                        photoExpanded.classList.add('hide');
+                        setTimeout(function () {
+                            photoExpanded.classList.remove('show');
+                            document.body.removeChild(photoExpanded);
+                            document.body.removeChild(overlay);
+                        }, 600);
+                    });
+                    downloadButton.addEventListener('click', function (event) {
+                        var link = document.createElement('a');
+                        link.href = img.src;
+                        link.download = 'fractal';
+                        link.click();
+                        document.body.removeChild(link);
+                    });
+                });
+
+                fractalPropertiesDiv.classList.add('fractal-properties');
+                fractalPropertiesDiv.innerHTML = getFractalProperties();
+
+                photoCard.classList.add('photo-card');
+                photoCard.style.width = `${window.innerWidth / 5}px`;
+                photoCard.style.height = `${window.innerHeight / 5 + 96}px`;
+
+                img.src = canvas.toDataURL();
+                img.style.height = `${window.innerHeight / 5}px`;
+                img.style.width = `${window.innerWidth / 5}px`;
+
+                photoCard.appendChild(img);
+                photoCard.appendChild(fractalPropertiesDiv);
+
+                if (photoCardsRow && photoCardsRow.children.length < 4) {
+                    photoCardsRow.appendChild(photoCard);
+                }
+                else {
+                    var newPhotoCardsRow = document.createElement('div');
+                    newPhotoCardsRow.classList.add('photo-cards-row');
+                    newPhotoCardsRow.appendChild(photoCard);
+                    gallery.appendChild(newPhotoCardsRow);
+                }
+            });
+            //////
+            leafletControlContainer.style.display = 'block';
+
+        }
+        function getAffineTransformations() { //Turns the values from the input boxes into the matrices
+            probs = [0];
+            var cells = document.querySelectorAll('.barnsley-input');
+            var i, j;
+            for (i = 0; i < 4; i++) {
+                affines[i] = new Array();
+                for (j = 0; j < 6; j++) {
+                    affines[i][j] = parseFloat(cells[7 * i + j].value);
+                    if (isNaN(affines[i][j])) { alert('Your matrix must only contain numbers'); return false; }
+                }
+                probs[i + 1] = probs[i] + parseFloat(cells[7 * i + 6].value);
+            }
+            if (probs[4] != 1) {
+                alert('Your probabilities do not add up to 1. Relative probabilities will be used instead.');
+                array_multiply(probs, (1 / probs[4]));
+            }
+
+        }
+        function makeFractal() {
+            f.xmin = 0;
+            f.xmax = 0;
+            f.ymin = 0;
+            f.ymax = 0;
+            var i, j, r;
+
+            fractal = [[0, 0, 0]];
+            getAffineTransformations();
+
+            var options = probs.length - 1;
+            f.npoints = parseInt(document.querySelector('#iter').value);
+
+            for (i = 1; i < f.npoints; i++) {
+                r = Math.random();
+                for (j = 0; j < options; j++) {
+                    if (probs[j] <= r && r < probs[j + 1]) {
+                        transform(affines[j]);
+                        fractal[i][2] = probs[j + 1];
+                        break;
+                    }
+                }
+                if (fractal[i][0] < f.xmin) { f.xmin = fractal[i][0]; }
+                if (fractal[i][1] < f.ymin) { f.ymin = fractal[i][1]; }
+                if (fractal[i][0] > f.xmax) { f.xmax = fractal[i][0]; }
+                if (fractal[i][1] > f.ymax) { f.ymax = fractal[i][1]; }
+            }
+        }
+        function generatePoints() { //Turns the fractal into an array of points to plot, called 'points'
+            var x, y, k, l = f.npoints;
+            var scalefactor = 1;
+            var cwidth = 1300;
+            var cheight = 700;
+
+            var coords = [];
+            points = [];
+            for (var i = 0; i < cwidth; i++) {
+                coords[i] = [];
+            }
+
+            var fwidth = f.xmax - f.xmin;
+            var fheight = f.ymax - f.ymin;
+
+            var xratio = (cwidth / fwidth);
+            var yratio = (cheight / fheight);
+            var xmid = f.xmin + fwidth / 2;
+
+            var factor = (xratio < yratio) ? xratio : yratio;
+
+            for (k = 0; k < l; k++) {
+                x = Math.round((fractal[k][0] - xmid) * factor * scalefactor + (cwidth / 2));
+                y = Math.round((fractal[k][1] - f.ymin) * factor * scalefactor);
+
+                if (0 <= x && x < cwidth && 0 <= y && y < cheight) {
+                    !(coords[x][y]) ? coords[x][y] = 1 : coords[x][y]++;
+                }
+            }
+
+            var i, j = coords.length, l, m = 0;
+            for (i = 0; i < j; i++) {
+                var k = coords[i].length;
+                if (k == 0) continue;
+                for (l = 0; l < k; l++) {
+                    if (coords[i][l]) { points[m] = [i, l]; m++; }
+                }
+            }
+
+            plot(fernColor);
+        }
+        function plot() {
+            "use strict";
+            var canvas = document.querySelector('.barnsley-canvas') ? document.querySelector('.barnsley-canvas') : document.createElement('canvas');
+            canvas.width = 1450;
+            canvas.height = 730;
+            canvas.classList.add('barnsley-canvas');
+            var ctx = canvas.getContext("2d");
+            const fernColor = document.getElementById('fernColor') ? document.getElementById('fernColor').value : 'green';
+
+            ctx.fillStyle = '#D6D6D6';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = fernColor;
+
+            var i, j = points.length;
+            for (i = 0; i < j; i++) {
+                ctx.fillRect(points[i][0] - 50, 720 - points[i][1], 1, 1);
+            }
+            document.body.insertBefore(canvas, document.getElementById('map'));
+        }
+        function transform(matrix) { //Uses the last element of the fractal array and the matrix to make a new element
+            /*
+            [a, b] X [x[i-1]] + [e] = x[i]
+            [c, d]   [y[i-1]]   [f]   y[i]
+            */
+
+            "use strict";
+
+            var i = fractal.length;
+            fractal[i] = [(matrix[0] * fractal[i - 1][0]) + (matrix[1] * fractal[i - 1][1]) + (matrix[4]), (matrix[2] * fractal[i - 1][0]) + (matrix[3] * fractal[i - 1][1]) + (matrix[5])];
+        }
+
+
+        let quantColors = null;
+        function createPalette(file) {
+            const image = new Image();
+            const fileReader = new FileReader();
+
+            fileReader.onload = () => {
+                image.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = image.width;
+                    canvas.height = image.height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(image, 0, 0);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const rgbArray = buildRgb(imageData.data);
+                    quantColors = orderByLuminance(quantization(rgbArray, 0));
+                    console.log(quantColors);
+                    //console.log(quantColors);
+                    //buildPalette(quantColors);
+                };
+                image.src = fileReader.result;
+            };
+            fileReader.readAsDataURL(file);
+        };
+        function showPalette(event){
+            event.preventDefault();
+            var overlay = document.createElement('div');
+            overlay.classList.add('overlay');
+            document.body.appendChild(overlay);
+            const quantizedPaletteContainer = document.querySelector('.quantizedPaletteContainer');
+            const quantizedPalette = document.querySelector('.quantizedPalette');
+            quantizedPaletteContainer.style.display = 'block';
+            const quantizedPaletteText = document.getElementById('quantizedPaletteText');
+            if(quantColors == null) {
+                quantizedPaletteText.textContent = 'Quantize an image to get a palette.'
+                quantizedPalette.innerHTML = '';
+            }
+            else {
+                quantizedPaletteText.textContent = '';
+                buildPalette(quantColors);
+            }
+            overlay.addEventListener('click', function () {
+                quantizedPaletteContainer.classList.add('hide');
+                setTimeout(function () {
+                    quantizedPaletteContainer.style.display = 'none';
+                    quantizedPaletteContainer.classList.remove('hide');
+                    document.body.removeChild(overlay);
+                }, 600);
+            });
+
+
+        }
+        
+        
+        var map = L.map('map', { minZoom: 1 }).setView([0, 0], 2);
+
+        var JuliaControl = L.Control.extend({
+            options: {
+                position: 'topright'
+            },
+            formChange: function (map, defaults) {
+                var values, inputs, len, i;
+
+                values = {};
+
+                values.cr = 0.4;
+                values.ci = 0.002275;
+                values.fractalType = "julia";
+                values.r = 4;
+
+                values.a1 = 0, values.b1 = 0, values.c1 = 0, values.d1 = 0.16, values.e1 = 0, values.f1 = 0, values.p1 = 0.01;
+                values.a2 = 0.85, values.b2 = 0.04, values.c2 = -0.04, values.d2 = 0.85, values.e2 = 0, values.f2 = 1.6, values.p2 = 0.85;
+                values.a3 = 0.2, values.b3 = -0.26, values.c3 = 0.23, values.d3 = 0.22, values.e3 = 0, values.f3 = 1.6, values.p3 = 0.07;
+                values.a4 = -0.15, values.b4 = 0.28, values.c4 = 0.26, values.d4 = 0.24, values.e4 = 0, values.f4 = 0.44, values.p4 = 0.07;
+
+                values.fernColor = '#079c25';
+
+                values.colorPalette = "defaultPalette";
+                values.fernType = "barnsleyFern";
+                values.quantColors = (quantColors);
+                if (!defaults) {
+
+                    inputs = document.getElementsByClassName("juliaInput");
+                    len = inputs.length;
+                    i = 0;
+                    while (i < len) {
+                        if (inputs[i].name !== "fractalType") {
+                            if (inputs[i].name == "fernColor") {
+                                values[inputs[i].name] = (inputs[i].value).toString();
+                            }
+                            else if (inputs[i].name == "colorPalette")
+                                values[inputs[i].name] = (inputs[i].value).toString();
+                            else if (inputs[i].name == "fernType")
+                                values[inputs[i].name] = (inputs[i].value).toString();
+                            else
+                                values[inputs[i].name] = parseFloat(inputs[i].value, 10);
+                        } else {
+                            values[inputs[i].name] = inputs[i].value
+                        }
+                        i++;
+                    }
+                    if (this.layer) {
+                        map.removeLayer(this.layer);
+                    }
+
+                }
+                this.layer = L.tileLayer.fractalLayer(6, values.fractalType, values.iterations, values.cr, values.ci, values.r, values.colorPalette, values.quantColors, values.a1, values.b1, values.c1, values.d1, values.e1, values.f1, values.p1, values.a2, values.b2, values.c2, values.d2, values.e2, values.f2, values.p2, values.a3, values.b3, values.c3, values.d3, values.e3, values.f3, values.p3, values.a4, values.b4, values.c4, values.d4, values.e4, values.f4, values.p4, values.fernColor, values.fernType).addTo(map);
+                history.pushState(values, "", "#" + values.iterations + "/" + values.cr + "/" + values.ci + "/" + values.fractalType + "/" + values.r + "/" + values.a1 + "/" + values.b1 + "/" + values.c1 + "/" + values.d1 + "/" + values.e1 + "/" + values.f1 + "/" + values.p1 + "/" + values.a2 + "/" + values.b2 + "/" + values.c2 + "/" + values.d2 + "/" + values.e2 + "/" + values.f2 + "/" + values.p2 + "/" + values.a3 + "/" + values.b3 + "/" + values.c3 + "/" + values.d3 + "/" + values.e3 + "/" + values.f3 + "/" + values.p3 + "/" + values.a4 + "/" + values.b4 + "/" + values.c4 + "/" + values.d4 + "/" + values.e4 + "/" + values.f4 + "/" + values.p4 + "/" + values.fernColor + "/" + values.colorPalette + "/" + values.fernType);
+                values.type = values.fractalType;
+                values[values.type] = true;
+                values[values.colorPalette] = true;
+                values[values.fernType] = true;
+                values.iter = values.iterations;
+                var form = document.getElementsByClassName("juliaForm");
+                if (form.length) {
+                    form[0].innerHTML = this.template(values);
+                }
+            },
+            onAdd: function (map) {
+                // create the control container with a particular class name
+                var temp = `
+                    <label class="juliaLabel" for="fractalType">Fractal Type: </label>
+                    <select class="juliaInput " id="fractalType" name="fractalType">
+                        <option value="julia" {{#julia}}selected{{/julia}}>Julia</option>
+                        <option value="barnsley" {{#barnsley}}selected{{/barnsley}}>Barnsley</option>
+                    </select>
+
+                    {{#julia}}
+                        <label class="juliaLabel" for="cr">Real: </label>
+                        <input class="juliaInput" id="cr" type="number" name="cr" value="{{cr}}" min="-2" max="2" step="0.001">
+
+                        <label class="juliaLabel" for="ci">Imaginary: </label>
+                        <input class="juliaInput" type="number" name="ci" id="ci" value="{{ci}}" min="-2" max="2" step="0.001">
+
+                    <div class="row">
+                        <label class="juliaLabel" for="r">Escape Radius: </label>
+                        <input class="juliaInput" type="number" name="r" id="r" value="{{r}}" min="0" max="10" step="0.1">
+                    {{/julia}}
+                        <label class="juliaLabel" for="iterations">Iterations: </label>
+                        <input class="juliaInput" type="number" name="iterations" value="{{iter}}" step="100" min="0" id="iter">
+                    </div>
+
+                    {{#julia}}
+                    <div class="row">
+                        <label class="juliaLabel" for="colorPalette">Color Palette: </label>
+                        <select class="juliaInput" id="colorPalette" name="colorPalette">
+
+                            <option value="defaultPalette" {{#defaultPalette}}selected{{/defaultPalette}}>Default Color Palette</option>
+                            <option value="negativePalette" {{#negativePalette}}selected{{/negativePalette}}>Negative Color Palette</option>
+                            <option value="greenPinkPalette" {{#greenPinkPalette}}selected{{/greenPinkPalette}}>Green & Pink</option>
+                            <option value="sakuraPalette" {{#sakuraPalette}}selected{{/sakuraPalette}}>Sakura</option>
+                            <option value="greenPurplePalette" {{#greenPurplePalette}}selected{{/greenPurplePalette}}>Green & Purple</option>
+                            <option value="yellowRedPalette" {{#yellowRedPalette}}selected{{/yellowRedPalette}}>Yellow & Red</option>
+                            <option value="bluePurplePalette" {{#bluePurplePalette}}selected{{/bluePurplePalette}}>Blue Flower on Purple</option>
+                            <option value="galaxyPalette" {{#galaxyPalette}}selected{{/galaxyPalette}}>Galaxy</option>
+                            <option value="greenCloverPalette" {{#greenCloverPalette}}selected{{/greenCloverPalette}}>Green Clover</option>
+
+                        </select>
+                    </div>
+                    <div class="row">
+                        <label class="juliaLabel" for="imgfile">Quantize from: </label>
+                        <input type="file" class="juliaInput" id="imgfile" name="imgfile" onchange="createPalette(this.files[0]);"/>
+                        <button class="showPaletteBtn" onclick="showPalette(event);">Show palette</button>
+                    </div>
+                    
+                    {{/julia}}
+
+                    {{#barnsley}}
+                    <div class="row">
+                        <label class="juliaLabel" for="fernColor">Fern Color: </label>
+                        <input type="color" id="fernColor" name="fernColor" value="{{fernColor}}" class="juliaInput">
+
+                        <label class="juliaLabel" for="fernType">Fern Type: </label>
+                        <select onchange="fill_boxes(this.value);" class="juliaInput" id="fernType" name="fernType" >
+                            <option value="barnsleyFern" {{#barnsleyFern}}selected{{/barnsleyFern}}>Barnsley Fern</option>
+                            <option value="cyclosorus" {{#cyclosorus}}selected{{/cyclosorus}}>Cyclosorus</option>
+                            <option value="culcita" {{#culcita}}selected{{/culcita}}>Culcita</option>
+                            <option value="tree" {{#tree}}selected{{/tree}}>Tree</option>
+                        </select>
+                    </div>
+                    {{/barnsley}}
+
+                    {{#barnsley}}
+                    <div class="row">
+                        <label class="juliaLabel" style="margin-right: 30px;">Stem: </label>
+                        <input class="juliaInput barnsley-input" type="number" value="{{a1}}" step="0.01"  id="a1" name="a1">
+                        <input class="juliaInput barnsley-input" type="number" value="{{b1}}" step="0.01"  id="b1" name="b1">
+                        <input class="juliaInput barnsley-input" type="number" value="{{c1}}" step="0.01"  id="c1" name="c1">
+                        <input class="juliaInput barnsley-input" type="number" value="{{d1}}" step="0.01"  id="d1" name="d1">
+                        <input class="juliaInput barnsley-input" type="number" value="{{e1}}" step="0.01"  id="e1" name="e1">
+                        <input class="juliaInput barnsley-input" type="number" value="{{f1}}" step="0.01"  id="f1" name="f1">
+                        <label class="juliaLabel">Proba: </label>
+                        <input class="juliaInput barnsley-input" type="number" value="{{p1}}" step="0.1" min="0" id="p1" name="p1">
+                    </div>
+
+                    <div class="row">
+                        <label class="juliaLabel" style="margin-right: 26px;">Upper: </label>
+                        <input class="juliaInput barnsley-input" type="number" value="{{a2}}" step="0.01"  id="a2" name="a2">
+                        <input class="juliaInput barnsley-input" type="number" value="{{b2}}" step="0.01"  id="b2" name="b2">
+                        <input class="juliaInput barnsley-input" type="number" value="{{c2}}" step="0.01"  id="c2" name="c2">
+                        <input class="juliaInput barnsley-input" type="number" value="{{d2}}" step="0.01"  id="d2" name="d2">
+                        <input class="juliaInput barnsley-input" type="number" value="{{e2}}" step="0.01"  id="e2" name="e2">
+                        <input class="juliaInput barnsley-input" type="number" value="{{f2}}" step="0.01"  id="f2" name="f2">
+                        <label class="juliaLabel">Proba: </label>
+                        <input class="juliaInput barnsley-input" type="number" value="{{p2}}" step="0.01" min="0" id="p2" name="p2">
+                    </div>
+
+                    <div class="row">
+                        <label class="juliaLabel" style="margin-right: 7px;">Lower left: </label>
+                        <input class="juliaInput barnsley-input" type="number" value="{{a3}}" step="0.01" id="a3" name="a3">
+                        <input class="juliaInput barnsley-input" type="number" value="{{b3}}" step="0.01" id="b3" name="b3">
+                        <input class="juliaInput barnsley-input" type="number" value="{{c3}}" step="0.01" id="c3" name="c3">
+                        <input class="juliaInput barnsley-input" type="number" value="{{d3}}" step="0.01" id="d3" name="d3">
+                        <input class="juliaInput barnsley-input" type="number" value="{{e3}}" step="0.01" id="e3" name="e3">
+                        <input class="juliaInput barnsley-input" type="number" value="{{f3}}" step="0.01" id="f3" name="f3">
+                        <label class="juliaLabel">Proba: </label>
+                        <input class="juliaInput barnsley-input" type="number" value="{{p3}}" step="0.01" min="0" id="p3" name="p3">
+                    </div>
+
+                    <div class="row">
+                        <label class="juliaLabel">Lower right: </label>
+                        <input class="juliaInput barnsley-input" type="number" value="{{a4}}" step="0.01" id="a4" name="a4">
+                        <input class="juliaInput barnsley-input" type="number" value="{{b4}}" step="0.01" id="b4" name="b4">
+                        <input class="juliaInput barnsley-input" type="number" value="{{c4}}" step="0.01" id="c4" name="c4">
+                        <input class="juliaInput barnsley-input" type="number" value="{{d4}}" step="0.01" id="d4" name="d4">
+                        <input class="juliaInput barnsley-input" type="number" value="{{e4}}" step="0.01" id="e4" name="e4">
+                        <input class="juliaInput barnsley-input" type="number" value="{{f4}}" step="0.01" id="f4" name="f4">
+                        <label class="juliaLabel">Proba: </label>
+                        <input class="juliaInput barnsley-input" type="number" value="{{p4}}" step="0.01" min="0" id="p4" name="p4">
+                    </div>
+                    {{/barnsley}}
+                    `;
+                var container = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded leaflet-control control1');
+                // ... initialize other DOM elements, add listeners, etc.
+                this.template = Mustache.compile(temp);
+                var form = L.DomUtil.create("form", "juliaForm", container);
+                var params = {};
+                params.iter = 500;
+                params.cr = 0.4;
+                params.ci = 0.002275;
+                params.type = "julia";
+                params.r = 4;
+
+                params.a1 = 0, params.b1 = 0, params.c1 = 0, params.d1 = 0.16, params.e1 = 0, params.f1 = 0, params.p1 = 0.01;
+                params.a2 = 0.85, params.b2 = 0.04, params.c2 = -0.04, params.d2 = 0.85, params.e2 = 0, params.f2 = 1.6, params.p2 = 0.85;
+                params.a3 = 0.2, params.b3 = -0.26, params.c3 = 0.23, params.d3 = 0.22, params.e3 = 0, params.f3 = 1.6, params.p3 = 0.07;
+                params.a4 = -0.15, params.b4 = 0.28, params.c4 = 0.26, params.d4 = 0.24, params.e4 = 0, params.f4 = 0.44, params.p4 = 0.07;
+
+                params.fernColor = '#079c25';
+
+                params.colorPalette = "defaultPalette";
+                params.fernType = "barnsleyFern";
+
+                //form.dispatchFormChange()
+                L.DomEvent.addListener(form, "change", function (e) {
+                    const control = this;
+                    if (e.target && e.target.tagName === "INPUT" && e.target.type === "file") {
+                        console.log("File input change event was triggered");
+                        setTimeout(function () {
+                            control.formChange(map);
+                        }, 1000);
+                        
+                    } else {
+                        quantColors = null;
+                        const fractalType = document.getElementById('fractalType').value;
+                        const exportBtn = document.querySelector('.export-img-btn');
+                        const iterField = document.getElementById('iter');
+                        if (fractalType == 'barnsley' && iterField.value < 100000)
+                            iterField.value = 1000000;
+                        if (fractalType == 'julia' && iterField.value > 1000)
+                            iterField.value = 500;
+                        this.formChange(map);
+
+                        if (fractalType == 'barnsley') {
+                            makeFractal();
+                            generatePoints();
+                            exportBtn.style.marginLeft = '420px'
+                        } //
+                        else {
+                            exportBtn.style.marginLeft = '250px'
+                            var barnsleyCanvas = document.querySelector('.barnsley-canvas');
+                            if (barnsleyCanvas)
+                                barnsleyCanvas.remove();
+                        }
+                    }
+
+                }, this);
+                var hashes;
+                if (location.hash) {
+                    hashes = location.hash.slice(0, 1) === "#" ? location.hash.slice(1).split("/") : location.hash.split("/");
+                    params.iter = parseFloat(hashes[0], 10);
+                    params.cr = parseFloat(hashes[1], 10);
+                    params.ci = parseFloat(hashes[2], 10);
+                    params.type = hashes[3];
+                    params.r = parseFloat(hashes[4], 10);
+
+                    params.a1 = parseFloat(hashes[5], 10)
+                    params.b1 = parseFloat(hashes[6], 10)
+                    params.c1 = parseFloat(hashes[7], 10)
+                    params.d1 = parseFloat(hashes[8], 10)
+                    params.e1 = parseFloat(hashes[9], 10)
+                    params.f1 = parseFloat(hashes[10], 10)
+                    params.p1 = parseFloat(hashes[11], 10)
+
+                    params.a2 = parseFloat(hashes[12], 10)
+                    params.b2 = parseFloat(hashes[13], 10)
+                    params.c2 = parseFloat(hashes[14], 10)
+                    params.d2 = parseFloat(hashes[15], 10)
+                    params.e2 = parseFloat(hashes[16], 10)
+                    params.f2 = parseFloat(hashes[17], 10)
+                    params.p2 = parseFloat(hashes[18], 10)
+
+                    params.a3 = parseFloat(hashes[19], 10)
+                    params.b3 = parseFloat(hashes[20], 10)
+                    params.c3 = parseFloat(hashes[21], 10)
+                    params.d3 = parseFloat(hashes[22], 10)
+                    params.e3 = parseFloat(hashes[23], 10)
+                    params.f3 = parseFloat(hashes[24], 10)
+                    params.p3 = parseFloat(hashes[25], 10)
+
+                    params.a4 = parseFloat(hashes[26], 10)
+                    params.b4 = parseFloat(hashes[27], 10)
+                    params.c4 = parseFloat(hashes[28], 10)
+                    params.d4 = parseFloat(hashes[29], 10)
+                    params.e4 = parseFloat(hashes[30], 10)
+                    params.f4 = parseFloat(hashes[31], 10)
+                    params.p4 = parseFloat(hashes[32], 10)
+
+                    params.fernColor = hashes[33].toString();
+
+                    params.colorPalette = hashes[34];
+                    params.fernType = hashes[35];
+
+                    this.layer = L.tileLayer.fractalLayer(6, params.type, params.iter, params.cr, params.ci, params.r, params.colorPalette, params.a1, params.b1, params.c1, params.d1, params.e1, params.f1, params.p1, params.a2, params.b2, params.c2, params.d2, params.e2, params.f2, params.p2, params.a3, params.b3, params.c3, params.d3, params.e3, params.f3, params.p3, params.a4, params.b4, params.c4, params.d4, params.e4, params.f4, params.p4, params.fernColor, params.fernType).addTo(map);
+
+                } else {
+                    this.formChange(map, true);
+
+                }
+                var _this = this;
+                window.onpopstate = function (event) {
+                    if (event.state) {
+                        document.getElementById("cr").value = event.state.cr;
+                        document.getElementById("ci").value = event.state.ci;
+                        document.getElementById("iter").value = event.state.iterations;
+                        map.removeLayer(_this.layer);
+                        _this.layer = L.tileLayer.fractalLayer(6, "julia", event.state.iterations, event.state.cr, event.state.ci).addTo(map);
+                    }
+                };
+                params[params.type] = true;
+                params[params.colorPalette] = true;
+                params[params.fernType] = true;
+                form.innerHTML = this.template(params);
+                if (!L.Browser.touch) {
+                    L.DomEvent.disableClickPropagation(container);
+                    L.DomEvent.on(container, 'mousewheel', L.DomEvent.stopPropagation);
+                } else {
+                    L.DomEvent.on(container, 'click', L.DomEvent.stopPropagation);
+                }
+
+                var button = L.DomUtil.create('button', 'export-img-btn', container);
+                button.innerHTML = 'Export Image';
+
+                L.DomEvent.addListener(button, 'click', function () {
+                    takeFractalSnapshot();
+                    var gallery = document.querySelector('.gallery');
+                    gallery.classList.remove('hide');
+                    gallery.classList.add('animation');
+                    setTimeout(function () {
+                        gallery.classList.remove('animation');
+                    }, 820);
+                });
+
+                return container;
+            }
+        });
+        var cont = new JuliaControl();
+        map.addControl(cont);
+
+        var GalleryControl = L.Control.extend({
+            options: {
+                position: 'topright'
+            },
+            onAdd: function (map) {
+                var container = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded leaflet-control gallery');
+                container.style.overflowY = 'auto'; // Enable vertical scrolling
+                container.style.maxHeight = '85vh'; // Set maximum height for the gallery
+                var button = L.DomUtil.create('button', 'open-gallery-btn', container);
+                button.innerHTML = '← Open Gallery';
+                var overlay = document.createElement('div');
+                overlay.classList.add('gallery-overlay');
+                var galleryIsEmptyMessage = document.createElement('div');
+                galleryIsEmptyMessage.classList.add('gallery-is-empty-msg');
+                galleryIsEmptyMessage.textContent = 'Gallery is empty.'
+                container.appendChild(galleryIsEmptyMessage);
+
+                L.DomEvent.addListener(button, 'click', function () {
+                    if (container.classList.contains('expanded')) {
+                        container.classList.add('hide');
+                        setTimeout(function () {
+                            container.classList.remove('expanded');
+                            button.innerHTML = '← Open Gallery';
+                            map.scrollWheelZoom.enable();
+                            document.body.removeChild(overlay);
+                            galleryIsEmptyMessage.style.display = 'none';
+                        }, 600);
+
+                    } else {
+                        if (container.children.length <= 2)
+                            galleryIsEmptyMessage.style.display = 'block';
+                        else
+                            galleryIsEmptyMessage.style.display = 'none';
+                        document.body.appendChild(overlay);
+                        container.classList.remove('hide');
+                        container.classList.add('expanded');
+                        button.innerHTML = '&#x2715';
+                        map.scrollWheelZoom.disable();
+                    }
+                });
+                return container;
+            }
+        })
+        var secondCont = new GalleryControl();
+        map.addControl(secondCont);
+
+        const fractalType = document.getElementById('fractalType').value;
+        const exportBtn = document.querySelector('.export-img-btn');
+        const iterField = document.getElementById('iter');
+        if (fractalType == 'barnsley' && iterField.value < 100000)
+            iterField.value = 1000000;
+        if (fractalType == 'julia' && iterField.value > 1000)
+            iterField.value = 500;
+
+        if (fractalType == 'barnsley') {
+            makeFractal();
+            generatePoints();
+            exportBtn.style.marginLeft = '420px'
+        } //
+        else {
+            exportBtn.style.marginLeft = '250px'
+            var barnsleyCanvas = document.querySelector('.barnsley-canvas');
+            if (barnsleyCanvas)
+                barnsleyCanvas.remove();
+        }
+
+        /* const fernType = document.getElementById('fernType');
+         fernType.addEventListener('change', () => {
+             fill_boxes(fernType.value)
+         });*/
+
+    </script>
+    <script type="text/javascript">
+
+        var _gaq = _gaq || [];
+        _gaq.push(['_setAccount', 'UA-31218444-1']);
+        _gaq.push(['_trackPageview']);
+
+        (function () {
+            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+        })();
+
+    </script>
+
+
+</body>
+
+</html>
